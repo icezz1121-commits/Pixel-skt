@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pixel Art Pro v11.0 ✨</title>
+    <style>
+        :root { --primary: #007bff; --success: #28a745; --bg: #0a0a0a; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; color: white; }
+        
+        .header { background: #1a1a1a; padding: 0 15px; display: flex; justify-content: space-between; align-items: center; z-index: 2000; height: 55px; border-bottom: 1px solid #333; }
+        
+        #sideMenu { 
+            position: fixed; right: 0; top: 0; bottom: 0; width: 85%; max-width: 300px; 
+            background: #fff; color: #333; z-index: 3000; display: none; 
+            overflow-y: auto; -webkit-overflow-scrolling: touch; 
+            padding: 20px; box-shadow: -10px 0 30px rgba(0,0,0,0.5); 
+        }
+
+        .section { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .section-title { font-size: 0.75rem; font-weight: bold; color: #999; text-transform: uppercase; margin-bottom: 10px; display: block; }
+        
+        .tool-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+        .menu-tool-btn { 
+            background: #f0f0f0; border: 1px solid #ddd; padding: 8px 4px; 
+            border-radius: 10px; font-size: 0.7rem; font-weight: bold; 
+            display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; color: #444; 
+        }
+        .menu-tool-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .palette-list { display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; background: #f9f9f9; padding: 8px; border-radius: 10px; border: 1px solid #eee; }
+        .color-row { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 8px; background: white; border: 1px solid #eee; }
+        .color-row.active { border-color: var(--primary); background: #f0f7ff; }
+        .color-preview { width: 24px; height: 24px; border-radius: 4px; flex-shrink: 0; border: 1px solid #ddd; }
+        .color-input { border: none; width: 100%; font-size: 10px; font-family: monospace; outline: none; background: transparent; }
+
+        .viewport { flex-grow: 1; position: relative; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; touch-action: none; }
+        #canvas-container { position: absolute; transform-origin: center; will-change: transform; transition: transform 0.1s ease-out; }
+        #canvas { image-rendering: pixelated; background: white; box-shadow: 0 0 40px rgba(0,0,0,1); }
+
+        .btn { border: none; border-radius: 8px; padding: 10px 12px; font-weight: bold; font-size: 0.85rem; cursor: pointer; }
+        input[type="range"] { width: 100%; margin: 8px 0; accent-color: var(--primary); touch-action: auto; }
+        input[type="number"] { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd; font-size: 0.85rem; outline: none; }
+        
+        .upload-box { background: #f8f9fa; border: 1px dashed #ccc; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: center; }
+        .size-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <button class="btn" style="background:#333; color:white;" onclick="undo()">↩️ Undo</button>
+    <div style="display:flex; gap:6px;">
+        <button id="dlBtn" class="btn" style="background:var(--success); color:white; display:none;" onclick="download()">💾 Save</button>
+        <button class="btn" style="background:white; color:black; border:1px solid #ccc;" onclick="toggleMenu()">⚙️ Menu</button>
+    </div>
+</div>
+
+<div id="sideMenu">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h3 style="margin:0; font-size:1.5rem;">เครื่องมือ (v11.0)</h3>
+        <button onclick="toggleMenu()" style="border:none; background:none; font-size:1.8rem;">✕</button>
+    </div>
+
+    <div class="section">
+        <span class="section-title">โหมด (ซูม 2 นิ้วได้)</span>
+        <div class="tool-grid">
+            <div id="drawBtn" class="menu-tool-btn active" onclick="setMode('draw')"><span>✏️</span>วาด</div>
+            <div id="panBtn" class="menu-tool-btn" onclick="setMode('pan')"><span>🖐️</span>เลื่อน</div>
+            <div id="pickBtn" class="menu-tool-btn" onclick="setMode('pick')"><span>🧪</span>ดูดสี</div>
+            <div class="menu-tool-btn" onclick="resetView()"><span>🔄</span>Reset</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <span class="section-title">รูปภาพ & กำหนดขนาด</span>
+        <div class="upload-box">
+            <input type="file" id="upload" accept="image/*" style="width: 100%; font-size: 0.7rem;">
+        </div>
+        
+        <div class="size-inputs">
+            <div>
+                <label style="font-size:0.7rem; color:#666;">กว้าง (px):</label>
+                <input type="number" id="targetWidth" value="210">
+            </div>
+            <div>
+                <label style="font-size:0.7rem; color:#666;">สูง (px):</label>
+                <input type="number" id="targetHeight" value="291">
+            </div>
+        </div>
+
+        <label style="font-size:0.75rem; color:#666;">ความสว่าง: <span id="vB">157</span>%</label>
+        <input type="range" id="bright" min="50" max="250" value="157" oninput="document.getElementById('vB').innerText=this.value">
+        
+        <label style="font-size:0.75rem; color:#666;">ความอิ่มสี: <span id="vS">98</span>%</label>
+        <input type="range" id="saturate" min="0" max="200" value="98" oninput="document.getElementById('vS').innerText=this.value">
+        
+        <button class="btn" style="background:var(--primary); color:white; width:100%; margin-top:5px; padding:12px;" onclick="process()">⚡ แปลงรูปภาพ</button>
+    </div>
+
+    <div class="section">
+        <span class="section-title">ชุดสี 40 สี (Colors)</span>
+        <div id="paletteList" class="palette-list"></div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-top:8px;">
+            <button class="btn" style="background:#eee; font-size:0.7rem;" onclick="addColor()">+ เพิ่มสี</button>
+            <button class="btn" style="background:#444; color:white; font-size:0.7rem;" onclick="savePalette()">💾 บันทึกสี</button>
+        </div>
+    </div>
+</div>
+
+<div class="viewport" id="viewport">
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+</div>
+
+<script>
+    const cv = document.getElementById('canvas'), ctx = cv.getContext('2d', {willReadFrequently:true});
+    const container = document.getElementById('canvas-container');
+    const viewport = document.getElementById('viewport');
+    
+    let sourceImg = null, scale = 1, mode = 'draw';
+    let isDragging = false, lastX, lastY, posX = 0, posY = 0;
+    let selectedColorIdx = 0, undoStack = [];
+    let initialPinchDist = null, initialScale = 1;
+
+    // ชุดสี 40 สีมาตรฐานของคุณ
+    let currentPalette = JSON.parse(localStorage.getItem('pixelPalette')) || [
+        "#FFFFFF", "#FDF5E6", "#F5DEB3", "#DEB887", "#FCCF55", "#F4A460", "#FF8C00", "#FF4500", "#BA0900", "#FFEDF6", 
+        "#FFB6C1", "#FF69B4", "#FF1493", "#D8BFD8", "#E84D90", "#C6427B", "#80225F", "#BCBCFF", "#7F7FFF", "#483D8B", 
+        "#B0C4DE", "#87CEFA", "#00BFFF", "#0000FF", "#000080", "#AFEEEE", "#00CED1", "#008080", "#006400", "#E4F3D8", 
+        "#9ACD32", "#B4978E", "#8D6E63", "#795548", "#5D4037", "#3E2723", "#D3D3D3", "#B0B0B0", "#696969", "#000000"
+    ];
+
+    function setMode(m) {
+        mode = m;
+        ['drawBtn','panBtn','pickBtn'].forEach(id => document.getElementById(id).classList.remove('active'));
+        document.getElementById(m + 'Btn').classList.add('active');
+        if(window.innerWidth < 600) toggleMenu();
+    }
+
+    function toggleMenu() {
+        const m = document.getElementById('sideMenu');
+        m.style.display = (m.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function renderPaletteUI() {
+        const c = document.getElementById('paletteList');
+        c.innerHTML = '';
+        currentPalette.forEach((hex, i) => {
+            const row = document.createElement('div');
+            row.className = `color-row ${i === selectedColorIdx ? 'active' : ''}`;
+            row.onclick = () => { selectedColorIdx = i; renderPaletteUI(); };
+            row.innerHTML = `<div class="color-preview" style="background:${hex}"></div><input type="text" class="color-input" value="${hex}" onchange="currentPalette[${i}]=this.value.toUpperCase(); renderPaletteUI();">`;
+            c.appendChild(row);
+        });
+    }
+
+    function addColor() { currentPalette.push("#000000"); renderPaletteUI(); }
+    function savePalette() { localStorage.setItem('pixelPalette', JSON.stringify(currentPalette)); alert('บันทึกชุดสีสำเร็จ!'); }
+    function resetView() { scale = 1; posX = 0; posY = 0; updateTransform(); }
+    function updateTransform() { container.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
+
+    function undo() {
+        if (undoStack.length > 0) {
+            const img = new Image(); img.src = undoStack.pop();
+            img.onload = () => { ctx.clearRect(0,0,cv.width,cv.height); ctx.drawImage(img, 0, 0); };
+        }
+    }
+
+    // pinch zoom
+    function getDist(t1, t2) { return Math.sqrt(Math.pow(t1.clientX - t2.clientX, 2) + Math.pow(t1.clientY - t2.clientY, 2)); }
+
+    function handleStart(e) {
+        if (e.touches && e.touches.length === 2) {
+            isDragging = false; initialPinchDist = getDist(e.touches[0], e.touches[1]); initialScale = scale;
+        } else {
+            const t = e.touches ? e.touches[0] : e;
+            isDragging = true; lastX = t.clientX; lastY = t.clientY;
+            if (mode === 'draw' || mode === 'pick') {
+                undoStack.push(cv.toDataURL()); if(undoStack.length > 30) undoStack.shift();
+                interact(t);
+            }
+        }
+    }
+
+    function handleMove(e) {
+        if (e.touches && e.touches.length === 2) {
+            if (initialPinchDist === null) return;
+            scale = initialScale * (getDist(e.touches[0], e.touches[1]) / initialPinchDist);
+            updateTransform();
+        } else if (isDragging) {
+            const t = e.touches ? e.touches[0] : e;
+            if (mode === 'pan') {
+                posX += (t.clientX - lastX); posY += (t.clientY - lastY); updateTransform();
+            } else if (mode === 'draw') { interact(t); }
+            lastX = t.clientX; lastY = t.clientY;
+        }
+    }
+
+    function interact(t) {
+        const rect = cv.getBoundingClientRect();
+        const x = Math.floor((t.clientX - rect.left) / (rect.width / cv.width));
+        const y = Math.floor((t.clientY - rect.top) / (rect.height / cv.height));
+        if (x >= 0 && x < cv.width && y >= 0 && y < cv.height) {
+            if (mode === 'draw') {
+                ctx.fillStyle = currentPalette[selectedColorIdx]; ctx.fillRect(x, y, 1, 1);
+            } else if (mode === 'pick') {
+                const p = ctx.getImageData(x, y, 1, 1).data;
+                const hex = "#" + ((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1).toUpperCase();
+                currentPalette[selectedColorIdx] = hex; renderPaletteUI(); setMode('draw');
+            }
+        }
+    }
+
+    viewport.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(e); }, {passive: false});
+    viewport.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, {passive: false});
+    viewport.addEventListener('touchend', () => { isDragging = false; initialPinchDist = null; });
+    viewport.addEventListener('mousedown', handleStart);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', () => isDragging = false);
+
+    document.getElementById('upload').onchange = (e) => {
+        const r = new FileReader();
+        r.onload = (ev) => { sourceImg = new Image(); sourceImg.src = ev.target.result; sourceImg.onload = process; };
+        r.readAsDataURL(e.target.files[0]);
+    };
+
+    // --- Core Processing: Bayer Dithering Engine ---
+    const bayer8x8 = [
+        [ 0, 32,  8, 40,  2, 34, 10, 42], [48, 16, 56, 24, 50, 18, 58, 26], [12, 44,  4, 36, 14, 46,  6, 38], [60, 28, 52, 20, 62, 30, 54, 22],
+        [ 3, 35, 11, 43,  1, 33,  9, 41], [51, 19, 59, 27, 49, 17, 57, 25], [15, 47,  7, 39, 13, 45,  5, 37], [60, 28, 52, 20, 62, 30, 54, 22]
+    ];
+
+    function process() {
+        if(!sourceImg) return;
+        const w = parseInt(document.getElementById('targetWidth').value) || 210;
+        const h = parseInt(document.getElementById('targetHeight').value) || 291;
+        cv.width = w; cv.height = h;
+
+        const b = document.getElementById('bright').value;
+        const s = document.getElementById('saturate').value;
+        // ปรับ Contrast ให้สูงขึ้นเล็กน้อยเพื่อช่วยเทคนิค Dithering
+        ctx.filter = `brightness(${b}%) saturate(${s}%) contrast(120%)`;
+        ctx.drawImage(sourceImg, 0, 0, w, h);
+        ctx.filter = 'none';
+
+        const pal = currentPalette.map(h => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)]);
+        let imgData = ctx.getImageData(0,0,w,h), d = imgData.data;
+
+        // เริ่มขั้นตอน Dithering
+        for(let y=0; y<h; y++) {
+            for(let x=0; x<w; x++) {
+                let i = (y*w + x)*4;
+                
+                // คำนวณค่าลวดลาย (Threshold) จาก Bayer Matrix
+                let threshold = (bayer8x8[y % 8][x % 8] - 32) * 0.6;
+                
+                // ปรับค่าสีต้นฉบับด้วย Threshold ก่อนจะไปหาคู่สีที่ใกล้ที่สุด
+                let r=d[i] + threshold, g=d[i+1] + threshold, b=d[i+2] + threshold;
+
+                let best=pal[0], min=Infinity;
+                for(let c of pal) {
+                    // ใช้สูตรหาระยะห่างสีที่คำนวณตามจริงของดวงตามนุษย์ (Perceptual)
+                    let diff = Math.sqrt(0.3*Math.pow(r-c[0],2) + 0.59*Math.pow(g-c[1],2) + 0.11*Math.pow(b-c[2],2));
+                    if(diff < min) { min=diff; best=c; }
+                }
+                d[i]=best[0]; d[i+1]=best[1]; d[i+2]=best[2];
+            }
+        }
+        ctx.putImageData(imgData, 0, 0);
+        document.getElementById('dlBtn').style.display='inline-block';
+        resetView(); toggleMenu();
+    }
+
+    function download() {
+        const link = document.createElement('a');
+        link.download = `pixel-art-v11.png`;
+        link.href = cv.toDataURL();
+        link.click();
+    }
+    window.onload = renderPaletteUI;
+</script>
+</body>
+</html>
