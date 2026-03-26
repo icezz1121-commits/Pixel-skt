@@ -257,7 +257,7 @@
                 let i = (y*w + x)*4;
                 
                 // คำนวณค่าลวดลาย (Threshold) จาก Bayer Matrix
-                let threshold = (bayer8x8[y % 8][x % 8] - 32) * 0.6;
+                let threshold = (bayer8x8[y % 8][x % 8] - 32) * 0.4;
                 
                 // ปรับค่าสีต้นฉบับด้วย Threshold ก่อนจะไปหาคู่สีที่ใกล้ที่สุด
                 let r=d[i] + threshold, g=d[i+1] + threshold, b=d[i+2] + threshold;
